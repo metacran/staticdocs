@@ -10,10 +10,27 @@
 #' @examples
 #' parse_rd("whisker.render", "whisker")
 parse_rd <- function(topic, package) {
-  rd_raw <- utils:::.getHelpFile(rd_path(topic, package))
+  rd_raw <- unescape_rd(utils:::.getHelpFile(rd_path(topic, package)))
   rd <- structure(set_classes(rd_raw), class = "Rd_content")
   attr(rd, "Rd_tag") <- "Rd file"
   print(rd)
+}
+
+## \% -> %    This should not be done in \eqn and a couple of other
+##             places, but these do not appear frequently, anyway
+
+unescape_rd <- function(rd) {
+  if (is.list(rd)) {
+    att <- attributes(rd)
+    rd <- lapply(rd, unescape_rd)
+    attributes(rd) <- att
+    rd
+  } else {
+    att <- attributes(rd)
+    rd <- gsub("\\%", "%", rd, fixed = TRUE)
+    attributes(rd) <- att
+    rd
+  }
 }
 
 package_rd <- function(package) {
@@ -37,7 +54,7 @@ cached_parse_Rd <- function(path) {
   if (exists(hash, envir = rd_cache)) {
     rd_cache[[hash]]
   } else {
-    raw_rd <- parse_Rd(path)
+    raw_rd <- unescape_rd(parse_Rd(path))
     rd <- structure(set_classes(raw_rd), class = "Rd_content")
     rd_cache[[hash]] <- rd
     rd
